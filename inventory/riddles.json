@@ -1,0 +1,103 @@
+[
+  {
+    "id": "keys",
+    "question": "What has keys but cannot open locks?",
+    "answers": ["piano", "a piano"]
+  },
+  {
+    "id": "echo",
+    "question": "What speaks without a mouth and hears without ears?",
+    "answers": ["echo", "an echo"]
+  },
+  {
+    "id": "keyboard",
+    "question": "What has many keys but only one space?",
+    "answers": ["keyboard", "a keyboard"]
+  },
+  {
+    "id": "towel",
+    "question": "What gets wetter the more it dries?",
+    "answers": ["towel", "a towel"]
+  },
+  {
+    "id": "map",
+    "question": "What has cities but no houses, forests but no trees, and water but no fish?",
+    "answers": ["map", "a map"]
+  },
+  {
+    "id": "clock",
+    "question": "What has hands and a face but cannot hold anything or smile?",
+    "answers": ["clock", "a clock"]
+  },
+  {
+    "id": "footsteps",
+    "question": "The more you take, the more you leave behind. What are they?",
+    "answers": ["footsteps", "steps"]
+  },
+  {
+    "id": "future",
+    "question": "What is always in front of you but cannot be seen?",
+    "answers": ["future", "the future"]
+  },
+  {
+    "id": "comb",
+    "question": "What has many teeth but cannot bite?",
+    "answers": ["comb", "a comb"]
+  },
+  {
+    "id": "bottle",
+    "question": "What has a neck but no head?",
+    "answers": ["bottle", "a bottle"]
+  },
+  {
+    "id": "light",
+    "question": "What can fill a room but takes up no space?",
+    "answers": ["light"]
+  },
+  {
+    "id": "age",
+    "question": "What goes up but never comes down?",
+    "answers": ["age", "your age", "my age"]
+  },
+  {
+    "id": "silence",
+    "question": "What is so fragile that saying its name breaks it?",
+    "answers": ["silence"]
+  },
+  {
+    "id": "stamp",
+    "question": "What travels around the world while staying in one corner?",
+    "answers": ["stamp", "a stamp", "postage stamp", "a postage stamp"]
+  },
+  {
+    "id": "needle",
+    "question": "What has one eye but cannot see?",
+    "answers": ["needle", "a needle"]
+  },
+  {
+    "id": "river",
+    "question": "What runs but never walks, has a mouth but never talks, and has a bed but never sleeps?",
+    "answers": ["river", "a river"]
+  },
+  {
+    "id": "holes",
+    "question": "What is full of holes but still holds water?",
+    "answers": ["sponge", "a sponge"]
+  },
+  {
+    "id": "tomorrow",
+    "question": "What is coming but never arrives?",
+    "answers": ["tomorrow"]
+  },
+  {
+    "id": "fire",
+    "question": "Feed me and I live; give me a drink and I die. What am I?",
+    "answers": ["fire", "a fire"]
+  },
+  {
+    "id": "wrong",
+    "question": "Which word in the dictionary is always spelled wrong?",
+    "answers": ["wrong"]
+  }
+]
+
