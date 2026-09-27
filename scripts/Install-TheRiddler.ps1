@@ -1,3 +1,19 @@
+<#
+.SYNOPSIS
+Installs TheRiddler runtime files and optionally activates an interactive profile.
+.DESCRIPTION
+Copies only the module and riddle inventory into InstallRoot. When EnableProfile is
+specified, appends one clearly marked startup block to the exact ProfilePath. Existing
+non-TheRiddler profile content is preserved, and duplicate managed blocks are rejected.
+.PARAMETER SourceRoot
+Root of a complete TheRiddler checkout or staged runtime payload.
+.PARAMETER InstallRoot
+Destination for the managed runtime and its ownership marker.
+.PARAMETER ProfilePath
+Exact interactive user's PowerShell profile to update.
+.PARAMETER EnableProfile
+Adds the managed startup block. Without this switch, only runtime files are refreshed.
+#>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
 param(
     [Parameter()]
@@ -19,6 +35,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
+# Normalize paths once so validation and writes refer to the same locations.
 $source = [IO.Path]::GetFullPath($SourceRoot)
 $destination = [IO.Path]::GetFullPath($InstallRoot)
 $moduleSource = Join-Path $source 'src\TheRiddler'
@@ -34,6 +51,7 @@ if ($EnableProfile -and [string]::IsNullOrWhiteSpace($ProfilePath)) {
     throw '-ProfilePath is required when -EnableProfile is used.'
 }
 
+# A non-empty unmarked directory may belong to another application; never adopt it.
 if (Test-Path -LiteralPath $destination -PathType Container) {
     $existingItems = @(Get-ChildItem -LiteralPath $destination -Force)
     if ($existingItems.Count -gt 0 -and -not (Test-Path -LiteralPath $installMarker -PathType Leaf)) {
@@ -41,6 +59,8 @@ if (Test-Path -LiteralPath $destination -PathType Container) {
     }
 }
 
+# The marker records ownership for the uninstaller. It is written only after the
+# required runtime files have been copied successfully.
 if ($PSCmdlet.ShouldProcess($destination, 'Install TheRiddler files')) {
     New-Item -ItemType Directory -Path (Join-Path $destination 'src\TheRiddler') -Force | Out-Null
     New-Item -ItemType Directory -Path (Join-Path $destination 'inventory') -Force | Out-Null
@@ -62,6 +82,8 @@ if ($EnableProfile) {
     $escapedManifest = $moduleManifest.Replace("'", "''")
     $startMarker = '# >>> TheRiddler managed block >>>'
     $endMarker = '# <<< TheRiddler managed block <<<'
+    # ConsoleHost and UserInteractive prevent background or non-interactive PowerShell
+    # processes from entering the challenge loop.
     $block = @"
 $startMarker
 if (`$Host.Name -eq 'ConsoleHost' -and [Environment]::UserInteractive) {
@@ -76,6 +98,7 @@ $endMarker
         Get-Content -LiteralPath $resolvedProfile -Raw
     } else { '' }
 
+    # Refuse duplicates instead of attempting to merge two managed blocks.
     if ($existing -match [regex]::Escape($startMarker)) {
         throw "Profile '$resolvedProfile' already contains a TheRiddler managed block. Uninstall it before reinstalling."
     }
