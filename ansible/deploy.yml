@@ -1,0 +1,160 @@
+---
+- name: Manage TheRiddler on in-scope competition Windows hosts
+  hosts: competition_windows
+  gather_facts: false
+  serial: 1
+  any_errors_fatal: true
+
+  vars:
+    riddler_state: present
+    riddler_install_root: 'C:\ProgramData\TheRiddler'
+    riddler_profile_paths: []
+    riddler_allowed_profile_users:
+      - Commander Cody
+      - Commander Wolffe
+      - Captain Rex
+      - Captain Gregor
+      - CT Fives
+      - CT Echo
+      - CT Jesse
+      - CT 99
+      - CT Hevy
+      - CT Tup
+    riddler_forbidden_profile_users:
+      - realgreyteam
+      - dontdeletegreyteam
+
+  pre_tasks:
+    - name: Validate requested deployment state
+      ansible.builtin.assert:
+        that:
+          - riddler_state in ['present', 'absent']
+        fail_msg: "riddler_state must be 'present' or 'absent'."
+
+    - name: Require exact authorized user profile paths
+      ansible.builtin.assert:
+        that:
+          - riddler_profile_paths is sequence
+          - riddler_profile_paths is not string
+          - riddler_profile_paths | length > 0
+        fail_msg: >-
+          Set riddler_profile_paths to exact per-user PowerShell profile paths.
+          System-wide profiles are intentionally unsupported in this competition.
+
+    - name: Confirm Windows remoting is available
+      ansible.windows.win_ping:
+
+    - name: Verify the packet-declared Windows Server version
+      ansible.windows.win_powershell:
+        script: |
+          [CmdletBinding(SupportsShouldProcess)]
+          param()
+          $Ansible.Changed = $false
+          $os = Get-CimInstance -ClassName Win32_OperatingSystem
+          if ($os.Caption -notmatch 'Windows Server 2019') {
+              throw "Expected Windows Server 2019, found '$($os.Caption)'."
+          }
+          $Ansible.Result = @{ caption = $os.Caption; version = $os.Version }
+      when: riddler_state == 'present'
+
+    - name: Validate the managed installation root
+      ansible.windows.win_powershell:
+        script: "{{ lookup('ansible.builtin.file', playbook_dir + '/files/Assert-TheRiddlerInstallRoot.ps1') }}"
+        parameters:
+          InstallRoot: "{{ riddler_install_root }}"
+      when: riddler_state == 'present'
+
+    - name: Validate each authorized user profile target
+      ansible.windows.win_powershell:
+        script: "{{ lookup('ansible.builtin.file', playbook_dir + '/files/Assert-TheRiddlerProfile.ps1') }}"
+        parameters:
+          ProfilePath: "{{ item }}"
+          AllowedUserNameCsv: "{{ riddler_allowed_profile_users | join(';') }}"
+          ForbiddenUserNameCsv: "{{ riddler_forbidden_profile_users | join(';') }}"
+      loop: "{{ riddler_profile_paths }}"
+      loop_control:
+        label: "{{ item }}"
+      when: riddler_state == 'present'
+
+  tasks:
+    - name: Install TheRiddler
+      when: riddler_state == 'present'
+      block:
+        - name: Create managed runtime directories
+          ansible.windows.win_file:
+            path: "{{ item }}"
+            state: directory
+          loop:
+            - '{{ riddler_install_root }}\src\TheRiddler'
+            - '{{ riddler_install_root }}\inventory'
+            - '{{ riddler_install_root }}\scripts'
+
+        - name: Copy TheRiddler PowerShell module
+          ansible.windows.win_copy:
+            src: "{{ playbook_dir }}/../src/TheRiddler/"
+            dest: '{{ riddler_install_root }}\src\TheRiddler\'
+
+        - name: Copy TheRiddler riddle inventory
+          ansible.windows.win_copy:
+            src: "{{ playbook_dir }}/../inventory/riddles.json"
+            dest: '{{ riddler_install_root }}\inventory\riddles.json'
+
+        - name: Copy local recovery scripts
+          ansible.windows.win_copy:
+            src: "{{ playbook_dir }}/../scripts/"
+            dest: '{{ riddler_install_root }}\scripts\'
+
+        - name: Write deterministic ownership marker
+          ansible.windows.win_template:
+            src: "{{ playbook_dir }}/templates/install-marker.json.j2"
+            dest: '{{ riddler_install_root }}\.theriddler-install.json'
+
+        - name: Add or refresh the managed interactive profile block
+          ansible.windows.win_powershell:
+            script: "{{ lookup('ansible.builtin.file', playbook_dir + '/files/Set-TheRiddlerProfile.ps1') }}"
+            parameters:
+              ProfilePath: "{{ item }}"
+              ManifestPath: '{{ riddler_install_root }}\src\TheRiddler\TheRiddler.psd1'
+              State: Present
+          loop: "{{ riddler_profile_paths }}"
+          loop_control:
+            label: "{{ item }}"
+
+        - name: Verify the installed module and inventory
+          ansible.windows.win_powershell:
+            parameters:
+              ManifestPath: '{{ riddler_install_root }}\src\TheRiddler\TheRiddler.psd1'
+            script: |
+              [CmdletBinding(SupportsShouldProcess)]
+              param([Parameter(Mandatory)][string]$ManifestPath)
+              $ErrorActionPreference = 'Stop'
+              $Ansible.Changed = $false
+              Import-Module $ManifestPath -Force
+              $riddle = Get-TheRiddlerRiddle -Id keys
+              if (-not (Test-TheRiddlerAnswer -Riddle $riddle -Answer piano)) {
+                  throw 'The installed module failed its deterministic answer test.'
+              }
+              $Ansible.Result = @{
+                  moduleVersion = (Get-Module TheRiddler).Version.ToString()
+                  inventoryTest = 'passed'
+              }
+          when: not ansible_check_mode
+
+    - name: Remove TheRiddler
+      when: riddler_state == 'absent'
+      block:
+        - name: Remove the managed block from each configured profile
+          ansible.windows.win_powershell:
+            script: "{{ lookup('ansible.builtin.file', playbook_dir + '/files/Set-TheRiddlerProfile.ps1') }}"
+            parameters:
+              ProfilePath: "{{ item }}"
+              State: Absent
+          loop: "{{ riddler_profile_paths }}"
+          loop_control:
+            label: "{{ item }}"
+
+        - name: Remove the owned runtime directory safely
+          ansible.windows.win_powershell:
+            script: "{{ lookup('ansible.builtin.file', playbook_dir + '/files/Remove-TheRiddlerInstall.ps1') }}"
+            parameters:
+              InstallRoot: "{{ riddler_install_root }}"

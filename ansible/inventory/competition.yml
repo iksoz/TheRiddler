@@ -1,0 +1,28 @@
+---
+all:
+  children:
+    competition_windows:
+      hosts:
+        coruscant:
+          ansible_host: 10.110.20.11
+          competition_service: AD/DNS
+        naboo:
+          ansible_host: 10.110.20.12
+          competition_service: IIS
+        kamino:
+          ansible_host: 10.110.20.13
+          competition_service: CA
+        felucia:
+          ansible_host: 10.110.20.14
+          competition_service: SMB
+        alderaan:
+          ansible_host: 10.110.20.15
+          competition_service: MSSQL
+      vars:
+        ansible_connection: winrm
+        ansible_port: 5985
+        ansible_winrm_transport: ntlm
+
+        # Deliberately empty. Supply exact, authorized Blue Team user profile
+        # paths in an Ansible Vault vars file or with --extra-vars.
+        riddler_profile_paths: []
