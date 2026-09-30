@@ -131,7 +131,7 @@ function Read-TheRiddlerChallenge {
     )
 
     Write-Host ''
-    Write-Host "[TheRiddler] $($Riddle.question)" -ForegroundColor Yellow
+    Write-Host $Riddle.question -ForegroundColor Yellow
     if (-not $AnswerWasProvided) {
         $Answer = Read-Host 'Answer'
     }
@@ -200,13 +200,10 @@ function Enter-TheRiddlerShell {
     [CmdletBinding()]
     param()
 
-    Write-Host 'TheRiddler shell is active. Every command requires one correct answer.' -ForegroundColor Cyan
-    Write-Host "Enter 'exit' to leave (yes, it is gated too). Press Ctrl+C to cancel the current prompt." -ForegroundColor DarkGray
-
     while ($true) {
         $location = (Get-Location).Path
         try {
-            $line = Read-Host "riddler PS $location>"
+            $line = Read-Host "PS $location>"
         }
         catch [System.Management.Automation.PipelineStoppedException] {
             Write-Host ''

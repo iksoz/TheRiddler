@@ -1,0 +1,6 @@
+riddler_profile_paths:
+  - 'C:\Users\captainrex\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1'
+  - 'C:\Users\commandercody\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1'
+riddler_allowed_profile_users:
+  - captainrex
+  - commandercody

@@ -1,0 +1,88 @@
+- name: get baseline information for tests
+  win_powershell:
+    script: |
+      @{
+          IsWindows = $IsWindows -or $PSVersionTable.PSVersion -lt "6.0"
+          Tmpdir = (([IO.Path]::GetTempPath())).ToLowerInvariant()
+      }
+  register: test_baseline
+  changed_when: False
+
+- name: extract raw baseline information to facts
+  set_fact:
+    is_windows: '{{ test_baseline.output[0].IsWindows }}'
+    test_tmpdir: '{{ test_baseline.output[0].Tmpdir }}'
+
+- name: get datetimes used for tests
+  win_powershell:
+    script: |
+      $epoch_unspec = New-Object -TypeName DateTime -ArgumentList 1970, 1, 1
+      $epoch_local = New-Object -TypeName DateTime -ArgumentList 1970, 1, 1, 0, 0, 0, ([DateTimeKind]::Local)
+      $epoch_utc = New-Object -TypeName DateTime -ArgumentList 1970, 1, 1, 0, 0, 0, ([DateTimeKind]::Utc)
+
+      $epoch_unspec.ToString('o')
+      $epoch_unspec.ToLocalTime().ToString('o')
+      $epoch_unspec.ToUniversalTime().ToString('o')
+
+      $epoch_local.ToString('o')
+      $epoch_local.ToLocalTime().ToString('o')
+      $epoch_local.ToUniversalTime().ToString('o')
+
+      $epoch_utc.ToString('o')
+      $epoch_utc.ToLocalTime().ToString('o')
+      $epoch_utc.ToUniversalTime().ToString('o')
+
+      ([DateTimeOffset]$epoch_utc).ToOffset([TimeSpan]::FromHours(2)).ToString('o')
+  register: dt_values
+  changed_when: False
+
+- name: copy across test file
+  win_copy:
+    src: test-script.ps1
+    dest: '{{ remote_tmp_dir }}/test-script.ps1'
+
+- name: create script with syntax errors
+  win_copy:
+    content: |
+      [- abc
+    dest: '{{ remote_tmp_dir }}/syntax-error.ps1'
+
+- name: run failure tests
+  import_tasks: failure.yml
+
+- name: run tests using current interpreter
+  import_tasks: tests.yml
+
+- name: run tests using executable
+  import_tasks: tests.yml
+  when:
+  - is_windows
+  vars:
+    pwsh_executable: '{{ ansible_pwsh_interpreter | default("powershell.exe") }}'
+
+- name: run executable with arguments
+  win_powershell:
+    executable: powershell.exe
+    arguments:
+    - -ExecutionPolicy
+    - Restricted
+    script: |
+      $env:PSExecutionPolicyPreference
+  register: exe_with_arguments
+  when: is_windows
+
+- name: assert run executable with arguments
+  assert:
+    that:
+    - exe_with_arguments.output == ['Restricted']
+  when: is_windows
+
+# Verifies that PowerShell 7's PSModulePath does not interfere with WinPS modules
+- name: run PowerShell that imports a builtin module
+  win_powershell:
+    executable: powershell.exe
+    error_action: stop
+    script: Import-Module -Name Microsoft.PowerShell.Security -ErrorAction Stop
+  when:
+  - is_windows
+  - (ansible_pwsh_interpreter | default('')).endswith('pwsh.exe')

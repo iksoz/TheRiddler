@@ -1,0 +1,232 @@
+# test code for the win_feature module
+# (c) 2014, Chris Church <chris@ninemoreminutes.com>
+
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
+- name: start with feature absent
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: absent
+
+- name: install feature in check mode
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: present
+    include_sub_features: yes
+    include_management_tools: yes
+  register: win_feature_install_result_check
+  check_mode: true
+
+- name: check result of installing feature in check mode
+  assert:
+    that:
+    - win_feature_install_result_check is changed
+    - win_feature_install_result_check.success
+    - win_feature_install_result_check.exitcode == 'Success'
+    - not win_feature_install_result_check.reboot_required
+    - win_feature_install_result_check.feature_result|length == 1
+
+- name: install feature
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: present
+    include_sub_features: yes
+    include_management_tools: yes
+  register: win_feature_install_result
+
+- name: check result of installing feature
+  assert:
+    that:
+      - "win_feature_install_result is changed"
+      - "win_feature_install_result.success"
+      - "win_feature_install_result.exitcode == 'Success'"
+      - "not win_feature_install_result.reboot_required"
+      - "win_feature_install_result.feature_result|length == 1"
+      - "win_feature_install_result.feature_result[0].id is defined"
+      - "win_feature_install_result.feature_result[0].display_name is defined"
+      - "win_feature_install_result.feature_result[0].message is defined"
+      - "win_feature_install_result.feature_result[0].reboot_required is defined"
+      - "win_feature_install_result.feature_result[0].skip_reason is defined"
+      - "win_feature_install_result.feature_result[0].success is defined"
+
+- name: install feature again
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: present
+    include_sub_features: yes
+    include_management_tools: yes
+  register: win_feature_install_again_result
+
+- name: check result of installing feature again
+  assert:
+    that:
+      - "win_feature_install_again_result is not changed"
+      - "win_feature_install_again_result.success"
+      - "win_feature_install_again_result.exitcode == 'NoChangeNeeded'"
+      - "not win_feature_install_again_result.reboot_required"
+      - "win_feature_install_again_result.feature_result == []"
+
+- name: remove feature in check mode
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: absent
+  register: win_feature_remove_result_check
+  check_mode: true
+
+- name: check result of removing feature in check mode
+  assert:
+    that:
+      - win_feature_remove_result_check is changed
+      - win_feature_remove_result_check.success
+      - win_feature_remove_result_check.exitcode == 'Success'
+      - not win_feature_remove_result_check.reboot_required
+      - win_feature_remove_result_check.feature_result|length == 1
+
+- name: remove feature
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: absent
+  register: win_feature_remove_result
+
+- name: check result of removing feature
+  assert:
+    that:
+      - "win_feature_remove_result is changed"
+      - "win_feature_remove_result.success"
+      - "win_feature_remove_result.exitcode == 'Success'"
+      - "not win_feature_remove_result.reboot_required"
+      - "win_feature_remove_result.feature_result|length == 1"
+      - "win_feature_remove_result.feature_result[0].id is defined"
+      - "win_feature_remove_result.feature_result[0].display_name is defined"
+      - "win_feature_remove_result.feature_result[0].message is defined"
+      - "win_feature_remove_result.feature_result[0].reboot_required is defined"
+      - "win_feature_remove_result.feature_result[0].skip_reason is defined"
+      - "win_feature_remove_result.feature_result[0].success is defined"
+
+- name: remove feature again
+  win_feature:
+    name: "{{ test_win_feature_name }}"
+    state: absent
+  register: win_feature_remove_again_result
+
+- name: check result of removing feature again
+  assert:
+    that:
+      - "win_feature_remove_again_result is not changed"
+      - "win_feature_remove_again_result.success"
+      - "win_feature_remove_again_result.exitcode == 'NoChangeNeeded'"
+      - "not win_feature_remove_again_result.reboot_required"
+      - "win_feature_remove_again_result.feature_result == []"
+
+- name: install multiple features
+  win_feature:
+    name:
+      - "{{ test_win_feature_name }}"
+      - "{{ test_win_feature_name2 }}"
+    state: present
+  register: win_feature_install_multiple_result
+
+- name: assert install multiple features
+  assert:
+    that:
+      - win_feature_install_multiple_result is changed
+      - win_feature_install_multiple_result.success
+      - win_feature_install_multiple_result.exitcode == 'Success'
+      - not win_feature_install_multiple_result.reboot_required
+      - win_feature_install_multiple_result.feature_result|length == 2
+      - win_feature_install_multiple_result.feature_result[0].id is defined
+      - win_feature_install_multiple_result.feature_result[1].id is defined
+
+- name: install multiple features again
+  win_feature:
+    name:
+      - "{{ test_win_feature_name }}"
+      - "{{ test_win_feature_name2 }}"
+    state: present
+  register: win_feature_install_multiple_again_result
+
+- name: assert install multiple features again
+  assert:
+    that:
+      - win_feature_install_multiple_again_result is not changed
+      - win_feature_install_multiple_again_result.success
+      - win_feature_install_multiple_again_result.exitcode == 'NoChangeNeeded'
+      - not win_feature_install_multiple_again_result.reboot_required
+      - win_feature_install_multiple_again_result.feature_result == []
+
+- name: remove multiple features
+  win_feature:
+    name:
+      - "{{ test_win_feature_name }}"
+      - "{{ test_win_feature_name2 }}"
+    state: absent
+  register: win_feature_remove_multiple_result
+
+- name: assert remove multiple features
+  assert:
+    that:
+      - win_feature_remove_multiple_result is changed
+      - win_feature_remove_multiple_result.success
+      - win_feature_remove_multiple_result.exitcode == 'Success'
+      - not win_feature_remove_multiple_result.reboot_required
+      - win_feature_remove_multiple_result.feature_result|length == 2
+      - win_feature_remove_multiple_result.feature_result[0].id is defined
+      - win_feature_remove_multiple_result.feature_result[1].id is defined
+
+- name: remove multiple features again
+  win_feature:
+    name:
+      - "{{ test_win_feature_name }}"
+      - "{{ test_win_feature_name2 }}"
+    state: absent
+  register: win_feature_remove_multiple_again_result
+
+- name: assert remove multiple features again
+  assert:
+    that:
+      - win_feature_remove_multiple_again_result is not changed
+      - win_feature_remove_multiple_again_result.success
+      - win_feature_remove_multiple_again_result.exitcode == 'NoChangeNeeded'
+      - not win_feature_remove_multiple_again_result.reboot_required
+      - win_feature_remove_multiple_again_result.feature_result == []
+
+- name: try to install an invalid feature name
+  win_feature:
+    name: "Microsoft-Bob"
+    state: present
+  register: win_feature_install_invalid_result
+  ignore_errors: true
+
+- name: check result of installing invalid feature name
+  assert:
+    that:
+      - "win_feature_install_invalid_result is failed"
+      - "win_feature_install_invalid_result is not changed"
+      - "'The name was not found' in win_feature_install_invalid_result.msg"
+
+- name: try to remove an invalid feature name
+  win_feature:
+    name: "Microsoft-Bob"
+    state: absent
+  register: win_feature_remove_invalid_result
+  ignore_errors: true
+
+- name: check result of removing invalid feature name
+  assert:
+    that:
+      - "win_feature_remove_invalid_result is failed"
+      - "win_feature_remove_invalid_result is not changed"
+      - "'The name was not found' in win_feature_remove_invalid_result.msg"

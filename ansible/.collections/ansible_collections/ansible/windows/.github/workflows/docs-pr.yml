@@ -1,0 +1,60 @@
+name: Collection Docs
+concurrency:
+  group: docs-pr-${{ github.head_ref }}
+  cancel-in-progress: true
+"on":
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed]
+
+env:
+  GHP_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+
+jobs:
+  build-docs:
+    permissions:
+      contents: read
+    name: Build Ansible Docs
+    uses: ansible-community/github-docs-build/.github/workflows/_shared-docs-build-pr.yml@main
+    with:
+      ansible-ref: devel
+      collection-name: ansible.windows
+      init-lenient: false
+      init-fail-on-error: true
+      squash-hierarchy: true
+      init-project: Ansible.Windows Collection
+      init-copyright: Ansible.Windows Contributors
+      init-title: Ansible.Windows Collection Documentation
+      init-html-short-title: Ansible.Windows Collection Docs
+      init-extra-html-theme-options: |
+        documentation_home_url=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/branch/main/
+  comment:
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    needs: [build-docs]
+    name: PR comments
+    steps:
+      - name: PR comment
+        uses: ansible-community/github-docs-build/actions/ansible-docs-build-comment@main
+        with:
+          body-includes: "## Docs Build"
+          reactions: heart
+          action: ${{ needs.build-docs.outputs.changed != 'true' && 'remove' || '' }}
+          on-closed-action: remove
+          on-merged-action: remove
+          body: |
+            ## Docs Build 📝
+
+            Thank you for contribution!✨
+
+            The docsite for **this PR** is available for download as an artifact from this run:
+            ${{ needs.build-docs.outputs.artifact-url }}
+
+            You can compare to the docs for the `main` branch here:
+            ${{ env.GHP_BASE_URL }}/branch/main
+
+            File changes:
+
+            ${{ needs.build-docs.outputs.diff-files-rendered }}
+
+            ${{ needs.build-docs.outputs.diff-rendered }}

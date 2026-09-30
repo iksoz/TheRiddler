@@ -45,9 +45,13 @@ if ($State -eq 'Present') {
     $managedBlock = @"
 $startMarker
 if (`$Host.Name -eq 'ConsoleHost' -and [Environment]::UserInteractive) {
-    Import-Module '$escapedManifest' -Force
-    Enter-TheRiddlerShell
-    exit
+    try {
+        Import-Module '$escapedManifest' -Force
+        Enter-TheRiddlerShell
+    }
+    finally {
+        [Environment]::Exit(0)
+    }
 }
 $endMarker
 "@
